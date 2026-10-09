@@ -571,17 +571,46 @@
     const c = sprite(img, w, h);
     if (c) ctx.drawImage(c, x, y, w, h);
   }
-  // эмодзи (сердечко, звёздочки) — рисуем один раз в картинку
+  // сердечко и звёздочка — рисуем сами (эмодзи на Android смещаются и обрезаются)
   const emojiCache = {};
+  function heartPath(g, cx, cy, r){
+    g.beginPath();
+    g.moveTo(cx, cy + r*0.95);
+    g.bezierCurveTo(cx - r*1.35, cy + r*0.05, cx - r*1.05, cy - r*1.05, cx, cy - r*0.4);
+    g.bezierCurveTo(cx + r*1.05, cy - r*1.05, cx + r*1.35, cy + r*0.05, cx, cy + r*0.95);
+    g.closePath();
+  }
+  function starPath(g, cx, cy, r){
+    g.beginPath();
+    for (let i=0;i<10;i++){
+      const a = -Math.PI/2 + i*Math.PI/5, rr = i%2 ? r*0.45 : r;
+      const x = cx + Math.cos(a)*rr, y = cy + Math.sin(a)*rr;
+      if (i) g.lineTo(x,y); else g.moveTo(x,y);
+    }
+    g.closePath();
+  }
   function drawEmoji(ch, x, y, size){
     const px = Math.max(8, Math.round(size*DPR));
     const k = ch+px+'_'+spriteGen;
     let c = emojiCache[k];
     if (!c){
-      c = document.createElement('canvas'); c.width = c.height = Math.ceil(px*1.4);
-      const g = c.getContext('2d');
-      g.font = px+'px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText(ch, c.width/2, c.height/2);
+      c = document.createElement('canvas'); c.width = c.height = Math.ceil(px*1.6);
+      const g = c.getContext('2d'), m = c.width/2, r = px*0.5;
+      g.lineJoin = 'round';
+      if (ch === '⭐'){
+        starPath(g, m, m, r);
+        g.fillStyle = '#ffd23f'; g.fill();
+        g.lineWidth = Math.max(1, px*0.07); g.strokeStyle = '#e09a12'; g.stroke();
+      } else {
+        heartPath(g, m, m + r*0.05, r);
+        const gr = g.createLinearGradient(0, m-r, 0, m+r);
+        gr.addColorStop(0, '#ff5a6e'); gr.addColorStop(1, '#d81b3c');
+        g.fillStyle = gr; g.fill();
+        g.lineWidth = Math.max(1, px*0.06); g.strokeStyle = '#a3122c'; g.stroke();
+        // блик
+        g.beginPath(); g.ellipse(m - r*0.42, m - r*0.32, r*0.18, r*0.11, -0.6, 0, 6.29);
+        g.fillStyle = 'rgba(255,255,255,.75)'; g.fill();
+      }
       emojiCache[k] = c;
     }
     const d = c.width/DPR;
